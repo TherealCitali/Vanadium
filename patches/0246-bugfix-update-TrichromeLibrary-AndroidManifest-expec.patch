@@ -35,7 +35,7 @@ diff --git a/chrome/android/expectations/trichrome_library_64_apk.AndroidManifes
 index 8fd345aef3ceb..fe75d2105fbe8 100644
 --- a/chrome/android/expectations/trichrome_library_64_apk.AndroidManifest.expected
 +++ b/chrome/android/expectations/trichrome_library_64_apk.AndroidManifest.expected
-@@ -1,15;15 @@
+@@ -1,15 +1,15 @@
  <?xml version="1.0" ?>
  <manifest
      xmlns:android="http://schemas.android.com/apk/res/android"

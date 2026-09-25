@@ -71,7 +71,7 @@ diff --git a/chrome/android/chrome_public_apk_tmpl.gni b/chrome/android/chrome_p
 index e0fb44e14318f..e0c59a73e8748 100644
 --- a/chrome/android/chrome_public_apk_tmpl.gni
 +++ b/chrome/android/chrome_public_apk_tmpl.gni
-@@ -417,6 +417,8 @@ template("chrome_common_apk_or_module_tmpl") {
+@@ -417,6 +417,12 @@ template("chrome_common_apk_or_module_tmpl") {
            [ "//chrome/android:trichrome_chrome_bundle_module_pak_assets" ]
      } else if (_is_bundle) {
        asset_deps += [ "//chrome/android:chrome_bundle_module_pak_assets" ]

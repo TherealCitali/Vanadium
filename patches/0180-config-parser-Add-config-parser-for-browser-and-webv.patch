@@ -227,7 +227,7 @@ new file mode 100644
 index 0000000000000..da87b2742c40f
 --- /dev/null
 +++ b/vanadium/android_config/parser/java/src/app/vanadium/config/VanadiumConfParser.java
-@@ -0,0 +1,601 @@
+@@ -0,0 +1,588 @@
 +package app.vanadium.config;
 +
 +import android.annotation.SuppressLint;
@@ -615,7 +615,7 @@ index 0000000000000..da87b2742c40f
 +        if (configAppInfo == null) {
 +            configAppInfo = browserOrWebViewPkgInfo.applicationInfo;
 +        }
-
++
 +        String configApkFilePath = (configAppInfo != null && configAppInfo.publicSourceDir != null)
 +                ? configAppInfo.publicSourceDir
 +                : browserOrWebViewPkgInfo.applicationInfo.sourceDir;
