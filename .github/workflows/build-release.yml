@@ -49,8 +49,10 @@ jobs:
             exit 1
           fi
 
-      - name: Install Depot Tools
+      - name: Install Build Dependencies & Depot Tools
         run: |
+          sudo apt-get update
+          sudo apt-get install -y generate-ninja ninja-build python3-pip
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
           export PATH="$HOME/depot_tools:$PATH"
@@ -86,6 +88,8 @@ jobs:
             cd chromium/src
             if command -v autoninja &> /dev/null; then
               autoninja -C out/Default TrichromeChrome64 || ninja -C out/Default TrichromeChrome64
+            else
+              ninja -C out/Default TrichromeChrome64
             fi
           fi
 
