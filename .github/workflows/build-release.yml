@@ -30,6 +30,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name "TherealCitali"
+          git config --global user.email "citali@anisync.com"
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

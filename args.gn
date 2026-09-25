@@ -36,7 +36,6 @@ enable_printing = false
 enable_speech_service = false
 enable_spellcheck = false
 enable_hunspell = false
-enable_supervised_users = false
 enable_feed_v2 = false
 enable_mdns = false
 enable_service_discovery = false
