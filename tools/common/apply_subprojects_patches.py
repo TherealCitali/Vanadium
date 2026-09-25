@@ -39,7 +39,7 @@ def apply_subproject_patches(args) -> int:
             git_am_completed_proc = subprocess.run(git_am_cmd, capture_output=True)
             git_am_stdout_str = git_am_completed_proc.stdout.decode('utf-8')
             git_am_stdout_lines = git_am_stdout_str.splitlines()
-            git_am_patch_msg = git_am_stdout_lines[0].replace('Applying: ', '')
+            git_am_patch_msg = git_am_stdout_lines[0].replace('Applying: ', '') if git_am_stdout_lines else os.path.basename(patches_path_abs)
             if git_am_completed_proc.returncode != 0:
                 if git_am_patch_msg.startswith('[tmp]') or git_am_patch_msg.startswith('[upstream]'):
                     print(f'Skipping: {git_am_patch_msg}')
