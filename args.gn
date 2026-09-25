@@ -17,11 +17,40 @@ is_component_build = false
 is_debug = false
 is_official_build = true
 
-# Size optimizations: strip all symbols and debug info, generate resource allowlists
+# Primary Size Optimizations:
+# 1. Optimize for binary size (-Oz/-Os across compiler)
+optimize_for_size = true
+
+# 2. Identical Code Folding in lld linker
+use_icf = true
+
+# 3. ThinLTO and symbol stripping
 symbol_level = 0
 strip_debug_info = true
 enable_resource_allowlist_generation = true
 use_thin_lto = true
+
+# 4. Disable non-essential built-in Chromium sub-systems to cut library size:
+enable_pdf = false
+enable_printing = false
+enable_speech_service = false
+enable_spellcheck = false
+enable_hunspell = false
+enable_supervised_users = false
+enable_feed_v2 = false
+enable_mdns = false
+enable_service_discovery = false
+enable_gwp_asan = false
+enable_lens = false
+enable_compose = false
+enable_hangout_services_extension = false
+
+enable_vr = false
+enable_arcore = false
+enable_openxr = false
+enable_cardboard = false
+enable_remoting = false
+enable_reporting = false
 
 disable_fieldtrial_testing_config = true
 dfmify_dev_ui = false
@@ -36,13 +65,6 @@ proprietary_codecs = true
 
 is_cfi = true
 use_cfi_cast = true
-
-enable_vr = false
-enable_arcore = false
-enable_openxr = false
-enable_cardboard = false
-enable_remoting = false
-enable_reporting = false
 
 trichrome_certdigest = "da378d6a117dca6ecaf39e653efb2d6b686894c4de28ca0792b76565d85a9634"
 
