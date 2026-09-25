@@ -1,7 +1,10 @@
 target_os = "android"
-# change to x64 for x86_64 targets
+# arm64-v8a 64-bit only architecture target (no 32-bit, no universal)
 target_cpu = "arm64"
 enable_android_secondary_abi = false
+
+# Android 10 (API level 29) compatibility
+default_min_sdk_version = 29
 
 android_channel = "stable"
 android_default_version_name = "153.0.8010.52"
@@ -13,15 +16,18 @@ ext_version_increment = "0"
 is_component_build = false
 is_debug = false
 is_official_build = true
-symbol_level = 1
-disable_fieldtrial_testing_config = true
 
+# Size optimizations: strip all symbols and debug info, generate resource allowlists
+symbol_level = 0
+strip_debug_info = true
+enable_resource_allowlist_generation = true
+use_thin_lto = true
+
+disable_fieldtrial_testing_config = true
 dfmify_dev_ui = false
 
 # Restore M125 and older behavior of Password Manager settings,
-# which is Play services independent. This feature is planned
-# to be deprecated in 6 months, based on
-# https://chromium-review.googlesource.com/c/chromium/src/+/5493819
+# which is Play services independent.
 use_login_database_as_backend = true
 
 # enable patented codecs
@@ -30,9 +36,6 @@ proprietary_codecs = true
 
 is_cfi = true
 use_cfi_cast = true
-# This feature currently now works with with is_cfi=true, as of M146+.
-# Remove the comment indicator if compatibility issues are found in the future.
-# use_relative_vtables_abi = false
 
 enable_vr = false
 enable_arcore = false
@@ -41,25 +44,22 @@ enable_cardboard = false
 enable_remoting = false
 enable_reporting = false
 
-trichrome_certdigest = "c6adb8b83c6d4c17d292afde56fd488a51d316ff8f2c11c5410223bff8a7dbb3"
+trichrome_certdigest = "da378d6a117dca6ecaf39e653efb2d6b686894c4de28ca0792b76565d85a9634"
 
 chrome_public_manifest_package = "app.vanadium.browser"
 system_webview_package_name = "app.vanadium.webview"
 trichrome_library_package = "app.vanadium.trichromelibrary"
 
 config_apk_package = "app.vanadium.config"
-config_apk_certdigest = "c6adb8b83c6d4c17d292afde56fd488a51d316ff8f2c11c5410223bff8a7dbb3"
+config_apk_certdigest = "da378d6a117dca6ecaf39e653efb2d6b686894c4de28ca0792b76565d85a9634"
 config_apk_version_name = "209"
 config_apk_version_code = "209"
 config_apk_is_debug = false
 
 # Explicitly disable static analysis as intended for official builds.
-# See //build/config/android/config.gni line 90-92 as of M136
-# Without this, autoninja unnecessarily prints warnings on some build environment.
 android_static_analysis = "off"
 
 # Siso aims be a drop-in replacement for Ninja, and to speed up Chromium builds.
-# See https://chromium.googlesource.com/infra/infra/+/refs/heads/main/go/src/infra/build/siso/README.md for more details.
 use_siso = true
 
 # Enables usage of wasm in jitless mode or interpreter mode via DrumBrake.

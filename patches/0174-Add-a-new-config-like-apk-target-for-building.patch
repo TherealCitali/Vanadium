@@ -160,7 +160,7 @@ index 0000000000000..e2f441c691feb
 +    app_as_shared_lib = false
 +    version_name = _version_name
 +    version_code = _version_code
-+    min_sdk_version = 34
++    min_sdk_version = 29
 +
 +    deps = [
 +      "//android_webview/nonembedded:icon_resources",
