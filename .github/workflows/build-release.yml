@@ -53,6 +53,8 @@ jobs:
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
+          export PATH="$HOME/depot_tools:$PATH"
+          $HOME/depot_tools/update_depot_tools || true
 
       - name: Fetch Chromium Source & Apply Vanadium Patches
         run: |
@@ -60,24 +62,22 @@ jobs:
           mkdir -p chromium && cd chromium
           
           # Fetch Chromium src repository at target tag version 153.0.8010.52
-          git clone --depth 1 --branch 153.0.8010.52 https://chromium.googlesource.com/chromium/src.git src || true
-          
-          if [ -d "src" ]; then
-            cd src
-            echo "Applying Vanadium patches..."
-            for patch in $(ls $GITHUB_WORKSPACE/patches/*.patch | sort); do
-              echo "Applying $patch..."
-              git apply "$patch" || patch -p1 < "$patch" || true
-            done
-            
-            mkdir -p out/Default
-            cp $GITHUB_WORKSPACE/args.gn out/Default/args.gn
-            
-            # Generate GN Ninja build files
-            if command -v gn &> /dev/null; then
-              gn gen out/Default
-            fi
+          if [ ! -d "src" ]; then
+            git clone --depth 1 --branch 153.0.8010.52 https://chromium.googlesource.com/chromium/src.git src
           fi
+          
+          cd src
+          echo "Applying Vanadium patches..."
+          for patch in $(ls $GITHUB_WORKSPACE/patches/*.patch | sort); do
+            echo "Applying $patch..."
+            git apply "$patch" || patch -p1 < "$patch" || exit 1
+          done
+          
+          mkdir -p out/Default
+          cp $GITHUB_WORKSPACE/args.gn out/Default/args.gn
+          
+          # Generate GN Ninja build files
+          gn gen out/Default
 
       - name: Build arm64-v8a Release Targets
         run: |
@@ -85,7 +85,7 @@ jobs:
           if [ -d "chromium/src/out/Default" ]; then
             cd chromium/src
             if command -v autoninja &> /dev/null; then
-              autoninja -C out/Default TrichromeChrome64 VanadiumConfig || ninja -C out/Default TrichromeChrome64 VanadiumConfig || true
+              autoninja -C out/Default TrichromeChrome64 || ninja -C out/Default TrichromeChrome64
             fi
           fi
 
@@ -99,6 +99,7 @@ jobs:
           APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
           
           # Collect built APK files from out/Default/apks or out/Default
+          shopt -s nullglob
           for apk in chromium/src/out/Default/apks/*.apk chromium/src/out/Default/*.apk out/Default/apks/*.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk with $APKSIGNER..."
@@ -118,11 +119,3 @@ jobs:
             release-apks/*.apk
             vanadium.keystore
           if-no-files-found: warn
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          generate_release_notes: true
-          files: release-apks/*.apk
-          token: ${{ secrets.MY_PAT_TOKEN || secrets.GITHUB_TOKEN }}
