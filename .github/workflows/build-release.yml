@@ -8,6 +8,10 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 jobs:
   build:
     name: Build Signed arm64-v8a Release APK
@@ -25,9 +29,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-
-      - name: Set up Android SDK & Build-Tools
-        uses: android-actions/setup-android@v3
 
       - name: Decode Keystore
         env:
@@ -49,12 +50,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           mkdir -p release-apks
-          APKSIGNER=$(which apksigner || echo "$ANDROID_HOME/build-tools/34.0.0/apksigner")
+          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
           
           if [ -d "out/Default/apks" ]; then
             for apk in out/Default/apks/*arm64*.apk out/Default/apks/Trichrome*.apk; do
               if [ -f "$apk" ]; then
-                echo "Signing $apk..."
+                echo "Signing $apk with $APKSIGNER..."
                 "$APKSIGNER" sign --ks ./vanadium.keystore \
                   --ks-pass "pass:${KEYSTORE_PASSWORD:-VanadiumRelease2026}" \
                   --ks-key-alias "${KEY_ALIAS:-vanadium}" \
