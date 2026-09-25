@@ -520,11 +520,6 @@ index 0000000000000..da87b2742c40f
 +    }
 +
 +    private static void init(Context ctx, SpecType specType) {
-+        if (!verifyConfigPackage(ctx)) {
-+            Log.w(TAG, "not initializing parsing with unverified config package");
-+            return;
-+        }
-+
 +        if (isInitialized()) {
 +            Log.w(TAG, "Not reinitializing on already parsed config package");
 +            return;
@@ -577,18 +572,6 @@ index 0000000000000..da87b2742c40f
 +
 +    private static @Nullable ParsedConfigs parse(
 +            Context ctx, SpecType specType) {
-+        PackageInfo unverifiedConfigPkgInfo = getPackageInfoOrNull(
-+                ctx, ConfigInfo.CONFIG_APK_PACKAGE, PackageManager.MATCH_DISABLED_COMPONENTS);
-+        if (unverifiedConfigPkgInfo == null) {
-+            Log.e(TAG, "unverified config package not found", new IllegalStateException());
-+            return null;
-+        }
-+
-+        if (!verifyConfigPackage(ctx)) {
-+            Log.w(TAG, "not parsing config with unverified config package");
-+            return ParsedConfigs.EMPTY;
-+        }
-+
 +        PackageInfo browserOrWebViewPkgInfo = switch (specType) {
 +            case BROWSER -> getPackageInfoOrNull(ctx, ctx.getPackageName(), 0);
 +            case WEBVIEW -> {
@@ -600,10 +583,10 @@ index 0000000000000..da87b2742c40f
 +                    String webViewPkgName = (String) getWebViewPackageName.invoke(null);
 +                    yield getPackageInfoOrNull(ctx, webViewPkgName, 0);
 +                } catch (Exception e) {
-+                    throw new IllegalStateException(e);
++                    yield getPackageInfoOrNull(ctx, ctx.getPackageName(), 0);
 +                }
 +            }
-+            default -> throw new IllegalArgumentException();
++            default -> getPackageInfoOrNull(ctx, ctx.getPackageName(), 0);
 +        };
 +        if (browserOrWebViewPkgInfo == null) {
 +            Log.wtf(TAG, "", new IllegalStateException("must be able to find own package"));
@@ -612,9 +595,9 @@ index 0000000000000..da87b2742c40f
 +
 +        PackageInfo configPkgInfo = getPackageInfoOrNull(
 +                ctx, ConfigInfo.CONFIG_APK_PACKAGE, PackageManager.MATCH_DISABLED_COMPONENTS);
-+        if (configPkgInfo == null) {
-+            Log.e(TAG, "config package not found", new IllegalStateException());
-+            return ParsedConfigs.EMPTY;
++        if (configPkgInfo == null || !verifyConfigPackage(ctx)) {
++            Log.i(TAG, "Standalone config package absent or unverified; falling back to embedded configs in main APK");
++            configPkgInfo = browserOrWebViewPkgInfo;
 +        }
 +
 +        final long configVersionCode = configPkgInfo.getLongVersionCode();
@@ -630,14 +613,18 @@ index 0000000000000..da87b2742c40f
 +
 +        ApplicationInfo configAppInfo = configPkgInfo.applicationInfo;
 +        if (configAppInfo == null) {
-+            Log.e(TAG, "config app info not found", new IllegalStateException());
-+            return ParsedConfigs.EMPTY;
++            configAppInfo = browserOrWebViewPkgInfo.applicationInfo;
 +        }
-+
-+        String configApkFilePath = configAppInfo.publicSourceDir;
+
++        String configApkFilePath = (configAppInfo != null && configAppInfo.publicSourceDir != null)
++                ? configAppInfo.publicSourceDir
++                : browserOrWebViewPkgInfo.applicationInfo.sourceDir;
 +        Configs configs;
 +        try (ZipFile f = new ZipFile(configApkFilePath)) {
 +            ZipEntry e = f.getEntry("proto_config.pb2");
++            if (e == null) {
++                e = f.getEntry("assets/proto_config.pb2");
++            }
 +            if (e == null) {
 +                Log.e(TAG, "missing config for runtime flag changes");
 +                return ParsedConfigs.EMPTY;

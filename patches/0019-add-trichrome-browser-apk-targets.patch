@@ -76,7 +76,11 @@ index e0fb44e14318f..e0c59a73e8748 100644
      } else if (_is_bundle) {
        asset_deps += [ "//chrome/android:chrome_bundle_module_pak_assets" ]
 +    } else if (_is_trichrome) {
-+      asset_deps += [ "//chrome/android:trichrome_chrome_apk_pak_assets" ]
++      asset_deps += [
++        "//chrome/android:trichrome_chrome_apk_pak_assets",
++        "//vanadium/android_config/filter_lists:ruleset_assets",
++        "//vanadium/android_config/proto/assets:proto_config_assets",
++      ]
      } else {
        assert(!_is_trichrome)
        asset_deps += [ "//chrome/android:chrome_apk_pak_assets" ]
