@@ -61,31 +61,38 @@ jobs:
       - name: Fetch Chromium Source & Apply Vanadium Patches
         run: |
           export PATH="$HOME/depot_tools:$PATH"
-          mkdir -p chromium && cd chromium
           
-          # Fetch Chromium src repository at target tag version 153.0.8010.52
-          if [ ! -d "src" ]; then
-            git clone --depth 1 --branch 153.0.8010.52 https://chromium.googlesource.com/chromium/src.git src
+          echo "Running gclient sync to fetch Chromium 153.0.8010.52 and subprojects..."
+          gclient sync --no-history --shallow --nohooks
+          
+          if [ -d "src" ]; then
+            cd src
+            echo "Applying Vanadium main patches..."
+            for patch in $(ls $GITHUB_WORKSPACE/patches/*.patch | sort); do
+              echo "Applying $patch..."
+              git apply "$patch" || patch -p1 < "$patch" || exit 1
+            done
+            
+            cd $GITHUB_WORKSPACE
+            echo "Running gclient hooks (downloading filter lists, applying subproject patches)..."
+            gclient runhooks || true
+            
+            cd src
+            mkdir -p out/Default
+            cp $GITHUB_WORKSPACE/args.gn out/Default/args.gn
+            
+            echo "Generating GN build files..."
+            gn gen out/Default
+          else
+            echo "Error: Chromium src directory not found after gclient sync" >&2
+            exit 1
           fi
-          
-          cd src
-          echo "Applying Vanadium patches..."
-          for patch in $(ls $GITHUB_WORKSPACE/patches/*.patch | sort); do
-            echo "Applying $patch..."
-            git apply "$patch" || patch -p1 < "$patch" || exit 1
-          done
-          
-          mkdir -p out/Default
-          cp $GITHUB_WORKSPACE/args.gn out/Default/args.gn
-          
-          # Generate GN Ninja build files
-          gn gen out/Default
 
       - name: Build arm64-v8a Release Targets
         run: |
           export PATH="$HOME/depot_tools:$PATH"
-          if [ -d "chromium/src/out/Default" ]; then
-            cd chromium/src
+          if [ -d "src/out/Default" ]; then
+            cd src
             if command -v autoninja &> /dev/null; then
               autoninja -C out/Default TrichromeChrome64 || ninja -C out/Default TrichromeChrome64
             else
@@ -104,7 +111,7 @@ jobs:
           
           # Collect built APK files from out/Default/apks or out/Default
           shopt -s nullglob
-          for apk in chromium/src/out/Default/apks/*.apk chromium/src/out/Default/*.apk out/Default/apks/*.apk; do
+          for apk in src/out/Default/apks/*.apk src/out/Default/*.apk out/Default/apks/*.apk; do
             if [ -f "$apk" ]; then
               echo "Signing $apk with $APKSIGNER..."
               "$APKSIGNER" sign --ks ./vanadium.keystore \
