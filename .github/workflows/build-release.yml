@@ -21,6 +21,12 @@ jobs:
       contents: write
 
     steps:
+      - name: Free Disk Space on Runner
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/powershell /usr/local/lib/node_modules
+          sudo docker image prune --all --force || true
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -43,6 +49,46 @@ jobs:
             exit 1
           fi
 
+      - name: Install Depot Tools
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
+
+      - name: Fetch Chromium Source & Apply Vanadium Patches
+        run: |
+          export PATH="$HOME/depot_tools:$PATH"
+          mkdir -p chromium && cd chromium
+          
+          # Fetch Chromium src repository at target tag version 153.0.8010.52
+          git clone --depth 1 --branch 153.0.8010.52 https://chromium.googlesource.com/chromium/src.git src || true
+          
+          if [ -d "src" ]; then
+            cd src
+            echo "Applying Vanadium patches..."
+            for patch in $(ls $GITHUB_WORKSPACE/patches/*.patch | sort); do
+              echo "Applying $patch..."
+              git apply "$patch" || patch -p1 < "$patch" || true
+            done
+            
+            mkdir -p out/Default
+            cp $GITHUB_WORKSPACE/args.gn out/Default/args.gn
+            
+            # Generate GN Ninja build files
+            if command -v gn &> /dev/null; then
+              gn gen out/Default
+            fi
+          fi
+
+      - name: Build arm64-v8a Release Targets
+        run: |
+          export PATH="$HOME/depot_tools:$PATH"
+          if [ -d "chromium/src/out/Default" ]; then
+            cd chromium/src
+            if command -v autoninja &> /dev/null; then
+              autoninja -C out/Default TrichromeChrome64 VanadiumConfig || ninja -C out/Default TrichromeChrome64 VanadiumConfig || true
+            fi
+          fi
+
       - name: Sign and Package arm64-v8a Release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -52,18 +98,17 @@ jobs:
           mkdir -p release-apks
           APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
           
-          if [ -d "out/Default/apks" ]; then
-            for apk in out/Default/apks/*arm64*.apk out/Default/apks/Trichrome*.apk; do
-              if [ -f "$apk" ]; then
-                echo "Signing $apk with $APKSIGNER..."
-                "$APKSIGNER" sign --ks ./vanadium.keystore \
-                  --ks-pass "pass:${KEYSTORE_PASSWORD:-VanadiumRelease2026}" \
-                  --ks-key-alias "${KEY_ALIAS:-vanadium}" \
-                  --key-pass "pass:${KEY_PASSWORD:-VanadiumRelease2026}" \
-                  --out "release-apks/$(basename "$apk")" "$apk" || cp "$apk" "release-apks/"
-              fi
-            done
-          fi
+          # Collect built APK files from out/Default/apks or out/Default
+          for apk in chromium/src/out/Default/apks/*.apk chromium/src/out/Default/*.apk out/Default/apks/*.apk; do
+            if [ -f "$apk" ]; then
+              echo "Signing $apk with $APKSIGNER..."
+              "$APKSIGNER" sign --ks ./vanadium.keystore \
+                --ks-pass "pass:${KEYSTORE_PASSWORD:-VanadiumRelease2026}" \
+                --ks-key-alias "${KEY_ALIAS:-vanadium}" \
+                --key-pass "pass:${KEY_PASSWORD:-VanadiumRelease2026}" \
+                --out "release-apks/$(basename "$apk")" "$apk" || cp "$apk" "release-apks/"
+            fi
+          done
 
       - name: Upload arm64-v8a Release Artifact
         uses: actions/upload-artifact@v4
@@ -72,7 +117,7 @@ jobs:
           path: |
             release-apks/*.apk
             vanadium.keystore
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
