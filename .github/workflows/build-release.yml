@@ -99,9 +99,9 @@ jobs:
           if [ -d "src/out/Default" ]; then
             cd src
             if command -v autoninja &> /dev/null; then
-              autoninja -C out/Default TrichromeChrome64 || ninja -C out/Default TrichromeChrome64
+              autoninja -C out/Default trichrome_chrome_64_apk || ninja -C out/Default trichrome_chrome_64_apk
             else
-              ninja -C out/Default TrichromeChrome64
+              ninja -C out/Default trichrome_chrome_64_apk
             fi
           fi
 
