@@ -15,7 +15,8 @@ ext_version_increment = "0"
 
 is_component_build = false
 is_debug = false
-is_official_build = true
+is_official_build = false
+chrome_pgo_phase = 0
 
 # Primary Size Optimizations:
 # 1. Optimize for binary size (-Oz/-Os across compiler)
@@ -24,13 +25,19 @@ optimize_for_size = true
 # 2. Identical Code Folding in lld linker
 use_icf = true
 
-# 3. ThinLTO and symbol stripping
+# 3. Symbol stripping & Build Speed Optimizations for GitHub CI Runners
 symbol_level = 0
+blink_symbol_level = 0
+v8_symbol_level = 0
 strip_debug_info = false
 enable_resource_allowlist_generation = false
-use_thin_lto = true
+use_thin_lto = false
+is_cfi = false
+use_cfi_cast = false
 
-# 4. Disable non-essential built-in Chromium sub-systems to cut library size:
+cc_wrapper = "ccache"
+
+# 4. Disable non-essential built-in Chromium sub-systems to cut library size and build steps:
 enable_pdf = false
 enable_printing = false
 enable_speech_service = false
@@ -70,9 +77,6 @@ use_login_database_as_backend = true
 # enable patented codecs
 ffmpeg_branding = "Chrome"
 proprietary_codecs = true
-
-is_cfi = true
-use_cfi_cast = true
 
 trichrome_certdigest = "da378d6a117dca6ecaf39e653efb2d6b686894c4de28ca0792b76565d85a9634"
 

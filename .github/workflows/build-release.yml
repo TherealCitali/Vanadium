@@ -41,6 +41,12 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-vanadium-ccache
+          max-size: 10G
+
       - name: Decode Keystore
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
@@ -57,7 +63,7 @@ jobs:
       - name: Install Build Dependencies & Depot Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y generate-ninja ninja-build python3-pip
+          sudo apt-get install -y generate-ninja ninja-build python3-pip ccache
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
           echo "$HOME/depot_tools" >> $GITHUB_PATH
           export PATH="$HOME/depot_tools:$PATH"
