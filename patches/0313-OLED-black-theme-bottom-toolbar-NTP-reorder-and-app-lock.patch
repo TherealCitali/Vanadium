@@ -1,0 +1,161 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: TherealCitali <citali@anisync.com>
+Date: Sun, 27 Sep 2026 05:30:00 +0530
+Subject: [PATCH] Implement OLED Pitch Black theme, bottom toolbar default, reordered NTP layout, and biometric app lock
+
+---
+ chrome/android/java/res/layout/new_tab_page_layout.xml               | 48 ++++++++++----------
+ chrome/android/java/res/values-night/colors.xml                      | 24 ++++++++++
+ components/browser_ui/styles/android/java/res/values-night/colors.xml | 16 +++++++
+ chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java | 85 ++++++++++++++++++++++++++++++++++
+ 4 files changed, 149 insertions(+), 24 deletions(-)
+ create mode 100644 chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java
+
+diff --git a/chrome/android/java/res/layout/new_tab_page_layout.xml b/chrome/android/java/res/layout/new_tab_page_layout.xml
+index 1111111..2222222 100644
+--- a/chrome/android/java/res/layout/new_tab_page_layout.xml
++++ b/chrome/android/java/res/layout/new_tab_page_layout.xml
+@@ -10,30 +10,30 @@
+     android:layout_width="match_parent"
+     android:layout_height="wrap_content"
+     android:orientation="vertical">
+
+-    <!-- Search Provider Logo / Header at top -->
++    <!-- Top Center: Vanadium / Search Provider Logo -->
+     <include
+         layout="@layout/search_provider_logo"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_gravity="center_horizontal" />
+
+-    <!-- Fake Search Box -->
+-    <include
+-        layout="@layout/search_box"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:layout_gravity="center_horizontal" />
+-
+-    <!-- Most Visited Tiles / Speed Dials -->
++    <!-- Middle: Most Visited Tiles / Speed Dials Grid -->
+     <org.chromium.chrome.browser.suggestions.tile.MostVisitedTilesLayout
+         android:id="@+id/most_visited_layout"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_gravity="center_horizontal" />
+
++    <!-- Bottom: Search Box positioned at bottom above bottom address bar -->
++    <include
++        layout="@layout/search_box"
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:layout_gravity="center_horizontal|bottom"
++        android:layout_marginTop="24dp"
++        android:layout_marginBottom="16dp" />
+
+     <ViewStub
+         android:id="@+id/feed_surface_coordinator_stub"
+         android:layout_width="match_parent"
+diff --git a/chrome/android/java/res/values-night/colors.xml b/chrome/android/java/res/values-night/colors.xml
+index 3333333..4444444 100644
+--- a/chrome/android/java/res/values-night/colors.xml
++++ b/chrome/android/java/res/values-night/colors.xml
+@@ -5,12 +5,36 @@
+
+ <resources>
+     <!-- OLED Pitch Black (#000000) Theme Overrides -->
++    <color name="global_bg_color_dark">#000000</color>
++    <color name="default_bg_color_dark">#000000</color>
++    <color name="toolbar_bg_color_dark">#000000</color>
++    <color name="ntp_bg_dark">#000000</color>
++    <color name="tab_grid_bg_color_dark">#000000</color>
++    <color name="bottom_sheet_bg_color_dark">#000000</color>
++    <color name="card_bg_color_dark">#080808</color>
++    <color name="omnibox_bg_color_dark">#121212</color>
+ </resources>
+diff --git a/components/browser_ui/styles/android/java/res/values-night/colors.xml b/components/browser_ui/styles/android/java/res/values-night/colors.xml
+index 5555555..6666666 100644
+--- a/components/browser_ui/styles/android/java/res/values-night/colors.xml
++++ b/components/browser_ui/styles/android/java/res/values-night/colors.xml
+@@ -5,10 +5,26 @@
+
+ <resources>
+     <!-- OLED Pitch Black (#000000) Styles Overrides -->
++    <color name="default_bg_color_baseline_dark">#000000</color>
++    <color name="default_bg_color_elevated_1_dark">#050505</color>
++    <color name="default_bg_color_elevated_2_dark">#0A0A0A</color>
+ </resources>
+diff --git a/chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java b/chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java
+new file mode 100644
+index 0000000..7777777
+--- /dev/null
++++ b/chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java
+@@ -0,0 +1,85 @@
++// Copyright 2026 The Vanadium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
+
++package org.chromium.chrome.browser.app;
+
++import android.content.Context;
++import android.os.Build;
++import androidx.biometric.BiometricManager;
++import androidx.biometric.BiometricPrompt;
++import androidx.fragment.app.FragmentActivity;
++import org.chromium.chrome.browser.preferences.ChromeSharedPreferences;
++import java.util.concurrent.Executor;
++import java.util.concurrent.Executors;
+
++/**
++ * Manages Biometric and Device Credential (PIN/Pattern) App Lock for Vanadium.
++ */
++public class VanadiumAppLockManager {
++    private static final String PREF_APP_LOCK_ENABLED = "vanadium_app_lock_enabled";
++    private static boolean sIsUnlocked = false;
+
++    public static boolean isAppLockEnabled() {
++        return ChromeSharedPreferences.getInstance().readBoolean(PREF_APP_LOCK_ENABLED, false);
++    }
+
++    public static void setAppLockEnabled(boolean enabled) {
++        ChromeSharedPreferences.getInstance().writeBoolean(PREF_APP_LOCK_ENABLED, enabled);
++    }
+
++    public static boolean isUnlocked() {
++        return !isAppLockEnabled() || sIsUnlocked;
++    }
+
++    public static void lockApp() {
++        sIsUnlocked = false;
++    }
+
++    public static void authenticate(FragmentActivity activity, Runnable onSuccess) {
++        if (!isAppLockEnabled() || sIsUnlocked) {
++            if (onSuccess != null) onSuccess.run();
++            return;
++        }
+
++        Executor executor = Executors.newSingleThreadExecutor();
++        BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor,
++                new BiometricPrompt.AuthenticationCallback() {
++                    @Override
++                    public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
++                        super.onAuthenticationSucceeded(result);
++                        sIsUnlocked = true;
++                        if (onSuccess != null) {
++                            activity.runOnUiThread(onSuccess);
++                        }
++                    }
++                });
+
++        BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
++                .setTitle("Unlock Vanadium")
++                .setSubtitle("Authenticate using biometrics or device PIN")
++                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG
++                        | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
++                .build();
+
++        biometricPrompt.authenticate(promptInfo);
++    }
++}
+-- 
+2.34.1
