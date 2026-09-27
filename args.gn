@@ -94,8 +94,8 @@ config_apk_is_debug = false
 # Explicitly disable static analysis as intended for official builds.
 android_static_analysis = "off"
 
-# Siso aims be a drop-in replacement for Ninja, and to speed up Chromium builds.
-use_siso = true
+# Disable siso to use ninja directly with ccache for 100% object caching across runs
+use_siso = false
 
 # Enables usage of wasm in jitless mode or interpreter mode via DrumBrake.
 v8_enable_drumbrake = true

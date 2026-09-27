@@ -44,8 +44,11 @@ jobs:
       - name: Set up ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-vanadium-ccache
+          key: ${{ runner.os }}-vanadium-ccache-v2
+          restore-keys: |
+            ${{ runner.os }}-vanadium-ccache
           max-size: 10G
+          save-always: true
 
       - name: Decode Keystore
         env:
@@ -104,11 +107,7 @@ jobs:
           export PATH="$HOME/depot_tools:$PATH"
           if [ -d "src/out/Default" ]; then
             cd src
-            if command -v autoninja &> /dev/null; then
-              autoninja -C out/Default trichrome_chrome_64_apk || ninja -C out/Default trichrome_chrome_64_apk
-            else
-              ninja -C out/Default trichrome_chrome_64_apk
-            fi
+            ninja -C out/Default trichrome_chrome_64_apk
           fi
 
       - name: Sign and Package arm64-v8a Release APK
