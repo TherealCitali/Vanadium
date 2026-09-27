@@ -15,7 +15,7 @@ diff --git a/chrome/android/java/res/layout/new_tab_page_layout.xml b/chrome/and
 index 1111111..2222222 100644
 --- a/chrome/android/java/res/layout/new_tab_page_layout.xml
 +++ b/chrome/android/java/res/layout/new_tab_page_layout.xml
-@@ -10,30;10 +10,30 @@
+@@ -10,30 +10,30 @@
      android:layout_width="match_parent"
      android:layout_height="wrap_content"
      android:orientation="vertical">
