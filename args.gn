@@ -18,14 +18,11 @@ is_debug = false
 is_official_build = false
 chrome_pgo_phase = 0
 
-# Primary Size Optimizations:
-# 1. Optimize for binary size (-Oz/-Os across compiler)
+# Primary Size & Compilation Optimizations:
 optimize_for_size = true
-
-# 2. Identical Code Folding in lld linker
 use_icf = true
 
-# 3. Symbol stripping & Build Speed Optimizations for GitHub CI Runners
+# Stripping & Build Speed Optimizations
 symbol_level = 0
 blink_symbol_level = 0
 v8_symbol_level = 0
@@ -37,7 +34,7 @@ use_cfi_cast = false
 
 cc_wrapper = "ccache"
 
-# 4. Disable non-essential built-in Chromium sub-systems to cut library size and build steps:
+# Disable unused sub-systems for speed & size (Ported & Expanded from Titanium/Palladium)
 enable_pdf = false
 enable_printing = false
 enable_speech_service = false
@@ -58,7 +55,19 @@ enable_cardboard = false
 enable_remoting = false
 enable_reporting = false
 
-# Media Codecs and Platform Features (Ported from Palladium)
+# Speed optimizations from Titanium Browser
+build_contextual_search = false
+dcheck_always_on = false
+enable_iterator_debugging = false
+rtc_build_examples = false
+use_errorprone_java_compiler = false
+use_rtti = false
+include_both_v8_snapshots = false
+include_both_v8_snapshots_android_secondary_abi = false
+
+# Media Codecs and Platform Features (Ported from Titanium & Palladium)
+enable_av1_decoder = true
+enable_dav1d_decoder = true
 enable_platform_ac3_eac3_audio = true
 enable_platform_hevc = true
 enable_hevc_parser_and_hw_decoder = true
@@ -70,11 +79,10 @@ enable_platform_mpeg_h_audio = true
 disable_fieldtrial_testing_config = true
 dfmify_dev_ui = false
 
-# Restore M125 and older behavior of Password Manager settings,
-# which is Play services independent.
+# Password Manager local database
 use_login_database_as_backend = true
 
-# enable patented codecs
+# Codecs
 ffmpeg_branding = "Chrome"
 proprietary_codecs = true
 
@@ -91,12 +99,11 @@ config_apk_version_name = "209"
 config_apk_version_code = "209"
 config_apk_is_debug = false
 
-# Explicitly disable static analysis as intended for official builds.
 android_static_analysis = "off"
 
-# Disable siso to use ninja directly with ccache for 100% object caching across runs
+# Direct ninja execution with ccache for 100% object caching across workflow runs
 use_siso = false
 
-# Enables usage of wasm in jitless mode or interpreter mode via DrumBrake.
+# DrumBrake JS interpreter mode
 v8_enable_drumbrake = true
 v8_drumbrake_bounds_checks = true
