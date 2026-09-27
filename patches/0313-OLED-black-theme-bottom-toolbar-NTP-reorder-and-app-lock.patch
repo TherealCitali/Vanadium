@@ -1,21 +1,21 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: TherealCitali <citali@anisync.com>
-Date: Sun, 27 Sep 2026 05:30:00 +0530
-Subject: [PATCH] Implement OLED Pitch Black theme, bottom toolbar default, reordered NTP layout, and biometric app lock
+Date: Sun, 27 Sep 2026 05:40:00 +0530
+Subject: [PATCH] Implement OLED Pitch Black theme, bottom toolbar default, reordered NTP layout, and internal PIN + device fingerprint app lock
 
 ---
  chrome/android/java/res/layout/new_tab_page_layout.xml               | 48 ++++++++++----------
  chrome/android/java/res/values-night/colors.xml                      | 24 ++++++++++
  components/browser_ui/styles/android/java/res/values-night/colors.xml | 16 +++++++
- chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java | 85 ++++++++++++++++++++++++++++++++++
- 4 files changed, 149 insertions(+), 24 deletions(-)
+ chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java | 140 ++++++++++++++++++++++++++++++++++
+ 4 files changed, 204 insertions(+), 24 deletions(-)
  create mode 100644 chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java
 
 diff --git a/chrome/android/java/res/layout/new_tab_page_layout.xml b/chrome/android/java/res/layout/new_tab_page_layout.xml
 index 1111111..2222222 100644
 --- a/chrome/android/java/res/layout/new_tab_page_layout.xml
 +++ b/chrome/android/java/res/layout/new_tab_page_layout.xml
-@@ -10,30 +10,30 @@
+@@ -10,30;10 +10,30 @@
      android:layout_width="match_parent"
      android:layout_height="wrap_content"
      android:orientation="vertical">
@@ -86,10 +86,10 @@ index 5555555..6666666 100644
  </resources>
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java b/chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java
 new file mode 100644
-index 0000000..7777777
+index 0000000..8888888
 --- /dev/null
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/app/VanadiumAppLockManager.java
-@@ -0,0 +1,85 @@
+@@ 0,0 +1,140 @@
 +// Copyright 2026 The Vanadium Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
@@ -97,19 +97,23 @@ index 0000000..7777777
 +package org.chromium.chrome.browser.app;
 
 +import android.content.Context;
-+import android.os.Build;
++import android.text.InputType;
++import android.widget.EditText;
++import androidx.appcompat.app.AlertDialog;
 +import androidx.biometric.BiometricManager;
 +import androidx.biometric.BiometricPrompt;
 +import androidx.fragment.app.FragmentActivity;
 +import org.chromium.chrome.browser.preferences.ChromeSharedPreferences;
++import java.security.MessageDigest;
 +import java.util.concurrent.Executor;
 +import java.util.concurrent.Executors;
 
 +/**
-+ * Manages Biometric and Device Credential (PIN/Pattern) App Lock for Vanadium.
++ * Manages App Lock using Hardware Fingerprint (Device Biometrics) and an Internal Custom App PIN.
 + */
 +public class VanadiumAppLockManager {
 +    private static final String PREF_APP_LOCK_ENABLED = "vanadium_app_lock_enabled";
++    private static final String PREF_INTERNAL_PIN_HASH = "vanadium_internal_pin_hash";
 +    private static boolean sIsUnlocked = false;
 
 +    public static boolean isAppLockEnabled() {
@@ -118,6 +122,37 @@ index 0000000..7777777
 
 +    public static void setAppLockEnabled(boolean enabled) {
 +        ChromeSharedPreferences.getInstance().writeBoolean(PREF_APP_LOCK_ENABLED, enabled);
++    }
+
++    public static boolean hasInternalPin() {
++        String hash = ChromeSharedPreferences.getInstance().readString(PREF_INTERNAL_PIN_HASH, "");
++        return hash != null && !hash.isEmpty();
++    }
+
++    public static void setInternalPin(String pin) {
++        String hash = hashPin(pin);
++        ChromeSharedPreferences.getInstance().writeString(PREF_INTERNAL_PIN_HASH, hash);
++    }
+
++    public static boolean verifyInternalPin(String pin) {
++        String savedHash = ChromeSharedPreferences.getInstance().readString(PREF_INTERNAL_PIN_HASH, "");
++        return savedHash != null && savedHash.equals(hashPin(pin));
++    }
+
++    private static String hashPin(String pin) {
++        try {
++            MessageDigest digest = MessageDigest.getInstance("SHA-256");
++            byte[] hash = digest.digest(pin.getBytes("UTF-8"));
++            StringBuilder hexString = new StringBuilder();
++            for (byte b : hash) {
++                String hex = Integer.toHexString(0xff & b);
++                if (hex.length() == 1) hexString.append('0');
++                hexString.append(hex);
++            }
++            return hexString.toString();
++        } catch (Exception e) {
++            return pin;
++        }
 +    }
 
 +    public static boolean isUnlocked() {
@@ -134,6 +169,7 @@ index 0000000..7777777
 +            return;
 +        }
 
++        // Attempt Device Fingerprint authentication first
 +        Executor executor = Executors.newSingleThreadExecutor();
 +        BiometricPrompt biometricPrompt = new BiometricPrompt(activity, executor,
 +                new BiometricPrompt.AuthenticationCallback() {
@@ -145,16 +181,48 @@ index 0000000..7777777
 +                            activity.runOnUiThread(onSuccess);
 +                        }
 +                    }
+
++                    @Override
++                    public void onAuthenticationError(int errorCode, CharSequence errString) {
++                        super.onAuthenticationError(errorCode, errString);
++                        // On error or negative button click ("Use Internal PIN"), fall back to Internal PIN dialog
++                        activity.runOnUiThread(() -> showInternalPinDialog(activity, onSuccess));
++                    }
 +                });
 
 +        BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
 +                .setTitle("Unlock Vanadium")
-+                .setSubtitle("Authenticate using biometrics or device PIN")
-+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG
-+                        | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
++                .setSubtitle("Use Fingerprint or Internal PIN")
++                .setNegativeButtonText("Use Internal PIN")
++                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
 +                .build();
 
 +        biometricPrompt.authenticate(promptInfo);
++    }
+
++    public static void showInternalPinDialog(FragmentActivity activity, Runnable onSuccess) {
++        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
++        builder.setTitle(hasInternalPin() ? "Enter Internal PIN" : "Set Internal PIN");
+
++        final EditText input = new EditText(activity);
++        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
++        builder.setView(input);
+
++        builder.setPositiveButton("OK", (dialog, which) -> {
++            String pin = input.getText().toString();
++            if (!hasInternalPin()) {
++                setInternalPin(pin);
++                sIsUnlocked = true;
++                if (onSuccess != null) onSuccess.run();
++            } else if (verifyInternalPin(pin)) {
++                sIsUnlocked = true;
++                if (onSuccess != null) onSuccess.run();
++            } else {
++                showInternalPinDialog(activity, onSuccess);
++            }
++        });
++        builder.setCancelable(false);
++        builder.show();
 +    }
 +}
 -- 
