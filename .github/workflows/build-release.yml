@@ -48,7 +48,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vanadium-ccache
           max-size: 10G
-          save-always: true
+          save: 'true'
 
       - name: Decode Keystore
         env:
@@ -88,6 +88,11 @@ jobs:
             done
             
             cd $GITHUB_WORKSPACE
+            echo "Applying custom Vanadium UI & App Lock enhancements..."
+            chmod +x $GITHUB_WORKSPACE/scripts/apply_custom_ui.py
+            python3 $GITHUB_WORKSPACE/scripts/apply_custom_ui.py
+            
+            cd $GITHUB_WORKSPACE
             echo "Running gclient hooks (downloading filter lists, applying subproject patches)..."
             gclient runhooks || true
             
@@ -107,7 +112,8 @@ jobs:
           export PATH="$HOME/depot_tools:$PATH"
           if [ -d "src/out/Default" ]; then
             cd src
-            ninja -C out/Default trichrome_chrome_64_apk
+            echo "Building chrome_public_apk (Standalone Browser APK)..."
+            ninja -C out/Default chrome_public_apk || ninja -C out/Default trichrome_chrome_64_apk
           fi
 
       - name: Sign and Package arm64-v8a Release APK
@@ -119,7 +125,6 @@ jobs:
           mkdir -p release-apks
           APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" | sort -V | tail -n 1)
           
-          # Collect built APK files from out/Default/apks or out/Default
           shopt -s nullglob
           for apk in src/out/Default/apks/*.apk src/out/Default/*.apk out/Default/apks/*.apk; do
             if [ -f "$apk" ]; then
